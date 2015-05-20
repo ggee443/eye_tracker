@@ -3,3 +3,16 @@ Authors: Tyler Ganter
 
 This repo contains files for ee443 final project: eye and gaze tracker.
 
+
+Current Status:
+	downloaded opencv
+	installed and configured cmake
+	successfully compiled and ran eye_tracker binary
+
+TODO:
+	add tyler's src files
+	test face and eye detection
+	capture video frames and manually crop eye regions
+	begin outlining eye center tracking src
+	
+
