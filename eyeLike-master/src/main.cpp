@@ -20,7 +20,7 @@ void detectAndDisplay( cv::Mat frame );
 
 /** Global variables */
 //-- Note, either copy these two files from opencv/data/haarscascades to your current folder, or change these locations
-cv::String face_cascade_name = "../../../res/haarcascade_frontalface_alt.xml";
+cv::String face_cascade_name = "../res/haarcascade_frontalface_alt.xml";
 cv::CascadeClassifier face_cascade;
 std::string main_window_name = "Capture - Face detection";
 std::string face_window_name = "Capture - Face";
@@ -32,11 +32,12 @@ cv::Mat skinCrCbHist = cv::Mat::zeros(cv::Size(256, 256), CV_8UC1);
  * @function main
  */
 int main( int argc, const char** argv ) {
-  CvCapture* capture;
+//  CvCapture* capture;
   cv::Mat frame;
 
   // Load the cascades
-  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face cascade, please change face_cascade_name in source code.\n"); return -1; };
+//  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face cascade, please change face_cascade_name in source code.\n"); return -1; };
+  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading face cascade, please change dir to .../eyeLike-master/build\n"); return -1; };
 
   cv::namedWindow(main_window_name,CV_WINDOW_NORMAL);
   cv::moveWindow(main_window_name, 400, 100);
@@ -56,20 +57,29 @@ int main( int argc, const char** argv ) {
           43.0, 0.0, 360.0, cv::Scalar(255, 255, 255), -1);
 
    // Read the video stream
-  capture = cvCaptureFromCAM( -1 );
-  if( capture ) {
+  cv::VideoCapture capture(0);
+//  capture = cvCaptureFromCAM( -1 );
+
+//  if( capture ) {
+  if( capture.isOpened() ) {
     while( true ) {
-      frame = cvQueryFrame( capture );
+//      frame = cvQueryFrame( capture );
       // mirror it
-      cv::flip(frame, frame, 1);
-      frame.copyTo(debugImage);
+//      cv::flip(frame, frame, 1);
+//      frame.copyTo(debugImage);
 
       // Apply the classifier to the frame
-      if( !frame.empty() ) {
+//      if( !frame.empty() ) {
+      if( capture.read(frame) ) {
+
+        // mirror it
+        cv::flip(frame, frame, 1);
+        frame.copyTo(debugImage);
+
         detectAndDisplay( frame );
       }
       else {
-        printf(" --(!) No captured frame -- Break!");
+        printf(" --(!) No captured frame -- Break!\n");
         break;
       }
 
