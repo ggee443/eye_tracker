@@ -30,10 +30,10 @@ string window_name = "Capture - Face detection";
 RNG rng(12345);
 
 // Initialize Mem
-std::vector<Rect> faces;
+vector<Rect> faces;
 Mat frame_gray;
 Mat faceROI;
-std::vector<Rect> eyes;
+vector<Rect> eyes;
 Rect eye;
 Point crosshair1;
 Point crosshair2;
@@ -45,27 +45,28 @@ int main( void )
 {
   VideoCapture capture(0);  //sudo apt-get install v4l2ucp v4l-utils libv4l-dev
   Mat frame;
-  int c;
+  int cc;
 
   //-- 1. Load the cascade
-  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
-  if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
+  if( !face_cascade.load( face_cascade_name ) ){ printf("--(!)objectDetection2:Error loading face_cascade files\n"); return -1; };
+  if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)objectDetection2:Error loading eyes_cascade files\n"); return -1; };
 
   //-- 2. Read the video stream
   if( capture.isOpened() )
   {      
-    while((char)c != 'c')
+    while((char)cc != 'q')
     {
       //-- 3. Apply the classifier to the frame
       if( capture.read(frame) ) {
             flip(frame, frame, 1);
             detectAndDisplay( frame );
+//--(!) testing
 //            imshow("Frame", frame);
         }
       else
       { printf(" --(!) No captured frame -- Break!\n"); break; }
 
-      int c = waitKey(1);
+      cc = waitKey(1);
 
     }
   }
@@ -75,6 +76,11 @@ int main( void )
 /**
  * @function detectAndDisplay
  */
+
+
+//--(!) figure out how to make this faster!
+// a: nuke current ubuntu 12.04 and install ubuntu 12.04LTS
+// b: only pass mats by reference
 void detectAndDisplay( Mat frame )
 {
    cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
@@ -104,6 +110,8 @@ void detectAndDisplay( Mat frame )
 
             // Find Eye Center
 //            Point eye_center( faces[i].x + eyes[j].x + eyes[j].width/2, faces[i].y + eyes[j].y + eyes[j].height/2 );
+
+
             Point eye_center = findEyeCenter(faceROI, eyes[j], "Debug Window");
 \
             // Draw Eye Center
@@ -127,5 +135,5 @@ void detectAndDisplay( Mat frame )
 
 
 
-// cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, std::string debugWindow);
+// cv::Point findEyeCenter(cv::Mat face, cv::Rect eye, string debugWindow);
 
