@@ -48,6 +48,19 @@ double computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor) {
   Or, check all the settings PATH, linker flags and include folders to make
   sure you are using the same version through the include/complile/link steps
 */
+/*
+  successfully uninstalled opencv2.4.11....
+  during compilation, these libraries came up as missing
+
+  /usr/bin/ld: cannot find -lopencv_nonfree
+  /usr/bin/ld: cannot find -lopencv_ocl
+  /usr/bin/ld: cannot find -lopencv_photo
+  /usr/bin/ld: cannot find -lopencv_stitching
+  /usr/bin/ld: cannot find -lopencv_superres
+  /usr/bin/ld: cannot find -lopencv_ts
+  /usr/bin/ld: cannot find -lopencv_videostab
+*/
+
   cv::meanStdDev(mat, meanMagnGrad, stdMagnGrad);
 
   double stdDev = stdMagnGrad[0] / sqrt(mat.rows*mat.cols);
