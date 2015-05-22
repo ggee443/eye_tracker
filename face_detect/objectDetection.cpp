@@ -25,11 +25,39 @@ CascadeClassifier eyes_cascade;
 string window_name = "Capture - Face detection";
 RNG rng(12345);
 
+
+
+
+
+
+/* Keep the webcam from locking up when you interrupt a frame capture */
+volatile int quit_signal=0;
+#ifdef __unix__
+#include <signal.h>
+extern "C" void quit_signal_handler(int signum) {
+ if (quit_signal!=0) exit(0); // just exit already
+ quit_signal=1;
+ printf("Will quit at next camera frame (repeat to kill now)\n");
+}
+#endif
+
+
+
+
+
 /**
  * @function main
  */
 int main( void )
 {
+
+  #ifdef __unix__
+    signal(SIGINT,quit_signal_handler); // listen for ctrl-C
+  #endif
+
+
+
+
   VideoCapture capture;
   Mat frame;
 
@@ -38,12 +66,15 @@ int main( void )
   if( !eyes_cascade.load( eyes_cascade_name ) ){ printf("--(!)Error loading\n"); return -1; };
 
   //-- 2. Read the video stream
-  capture.open( -1 );
+  capture.open( 0 );
+
   if( capture.isOpened() )
   {
     for(;;)
     {
       capture >> frame;
+
+      if (quit_signal) exit(0); // exit cleanly on interrupt
 
       //-- 3. Apply the classifier to the frame
       if( !frame.empty() )

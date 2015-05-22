@@ -34,10 +34,10 @@ cv::Mat matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY) {
 double computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor) {
   cv::Scalar stdMagnGrad, meanMagnGrad;
 
-  return 1.;
+//  return 1.;
   // ABORT:
   // Assertion failed (k == STD_VECTOR_MAT)
-  //meanStdDev(InputArray src, OutputArray mean, OutputArray stddev)
+  // meanStdDev(InputArray src, OutputArray mean, OutputArray stddev)
 /*
   It seems you have two versions of OpenCV installed, and the linker tries
   to use a different one for linking than the one used to compile your code.
