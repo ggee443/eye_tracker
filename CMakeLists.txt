@@ -3,6 +3,13 @@ project(eye_tracker)
 
 find_package( OpenCV REQUIRED )
 
+set( OBJ_DET_SRC face_detect/objectDetection2.cpp 
+		 face_detect/findEyeCenter.cpp 
+		 face_detect/helpers.cpp 
+)
+# save all binaries to bin folder in top level of project
+set( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
+
 ## Build ##
 include_directories(
   ${OpenCV_INCLUDE_LIBRARIES}
@@ -16,8 +23,12 @@ include_directories(
 
 ## Declare a cpp executable
 add_executable(eye_tracker eye_tracker.cpp)
+add_executable(obj_detect ${OBJ_DET_SRC})
 
 ## Specify libraries to link a library or executable target against
-target_link_libraries(eye_tracker
+target_link_libraries(eye_tracker 
+  ${OpenCV_LIBS}
+)
+target_link_libraries(obj_detect
   ${OpenCV_LIBS}
 )

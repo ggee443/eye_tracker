@@ -8,17 +8,19 @@
 
 #include "constants.h"
 
-bool rectInImage(cv::Rect rect, cv::Mat image) {
+using namespace cv;
+
+bool rectInImage(Rect rect, Mat image) {
   return rect.x > 0 && rect.y > 0 && rect.x+rect.width < image.cols &&
   rect.y+rect.height < image.rows;
 }
 
-bool inMat(cv::Point p,int rows,int cols) {
+bool inMat(Point p,int rows,int cols) {
   return p.x >= 0 && p.x < cols && p.y >= 0 && p.y < rows;
 }
 
-cv::Mat matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY) {
-  cv::Mat mags(matX.rows,matX.cols,CV_64F);
+Mat matrixMagnitude(const Mat &matX, const Mat &matY) {
+  Mat mags(matX.rows,matX.cols,CV_64F);
   for (int y = 0; y < matX.rows; ++y) {
     const double *Xr = matX.ptr<double>(y), *Yr = matY.ptr<double>(y);
     double *Mr = mags.ptr<double>(y);
@@ -31,38 +33,9 @@ cv::Mat matrixMagnitude(const cv::Mat &matX, const cv::Mat &matY) {
   return mags;
 }
 
-double computeDynamicThreshold(const cv::Mat &mat, double stdDevFactor) {
-  cv::Scalar stdMagnGrad, meanMagnGrad;
-
-//  return 1.;
-  // ABORT:
-  // Assertion failed (k == STD_VECTOR_MAT)
-  // meanStdDev(InputArray src, OutputArray mean, OutputArray stddev)
-/*
-  It seems you have two versions of OpenCV installed, and the linker tries
-  to use a different one for linking than the one used to compile your code.
-
-  The simplest way is to remove all the other OpenCV versions, and then a
-  possible wrong library path will be more explicit (somelib.so missing)
-
-  Or, check all the settings PATH, linker flags and include folders to make
-  sure you are using the same version through the include/complile/link steps
-*/
-/*
-  successfully uninstalled opencv2.4.11....
-  during compilation, these libraries came up as missing
-
-  /usr/bin/ld: cannot find -lopencv_nonfree
-  /usr/bin/ld: cannot find -lopencv_ocl
-  /usr/bin/ld: cannot find -lopencv_photo
-  /usr/bin/ld: cannot find -lopencv_stitching
-  /usr/bin/ld: cannot find -lopencv_superres
-  /usr/bin/ld: cannot find -lopencv_ts
-  /usr/bin/ld: cannot find -lopencv_videostab
-*/
-
-  cv::meanStdDev(mat, meanMagnGrad, stdMagnGrad);
-
+double computeDynamicThreshold(const Mat &mat, double stdDevFactor) {
+  Scalar stdMagnGrad, meanMagnGrad;
+  meanStdDev(mat, meanMagnGrad, stdMagnGrad);
   double stdDev = stdMagnGrad[0] / sqrt(mat.rows*mat.cols);
   return stdDevFactor * stdDev + meanMagnGrad[0];
 }
