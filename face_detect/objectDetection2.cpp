@@ -13,7 +13,10 @@
 #include <sstream>
 
 #include "findEyeCenter.h"
+<<<<<<< HEAD
 #include "findEyeCorner.h"
+=======
+>>>>>>> 69ee005371910764c898fb615bb263fa877551db
 
 using namespace std;
 using namespace cv;
@@ -103,7 +106,11 @@ int detectAndDisplay( Mat frame )
    int numFaces = 0;
 
    cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
+<<<<<<< HEAD
    equalizeHist( frame_gray, frame_gray ); // maybe remove this for speed if unnecessary for quality
+=======
+   equalizeHist( frame_gray, frame_gray );
+>>>>>>> 69ee005371910764c898fb615bb263fa877551db
 
    //-- Detect faces
    face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0, Size(80, 80) );

@@ -5,12 +5,19 @@ find_package( OpenCV REQUIRED )
 
 set( OBJ_DET_SRC face_detect/objectDetection2.cpp 
 		 face_detect/findEyeCenter.cpp 
+<<<<<<< HEAD
 		 face_detect/findEyeCorner.cpp
 		 face_detect/helpers.cpp 
 )
 # save all binaries to bin folder in top level of project
 set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test ) 
 #set( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin ) 
+=======
+		 face_detect/helpers.cpp 
+)
+# save all binaries to bin folder in top level of project
+set( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
+>>>>>>> 69ee005371910764c898fb615bb263fa877551db
 
 ## Build ##
 include_directories(
