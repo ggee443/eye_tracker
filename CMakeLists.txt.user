@@ -1,10 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE QtCreatorProject>
-<<<<<<< HEAD
-<!-- Written by Qt Creator 2.4.1, 2015-05-27T16:39:05. -->
-=======
-<!-- Written by Qt Creator 2.4.1, 2015-05-22T16:29:22. -->
->>>>>>> 69ee005371910764c898fb615bb263fa877551db
+<!-- Written by Qt Creator 2.4.1, 2015-05-27T16:51:30. -->
 <qtcreator>
  <data>
   <variable>ProjectExplorer.Project.ActiveTarget</variable>
@@ -275,11 +271,7 @@
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.EnvironmentId</variable>
-<<<<<<< HEAD
   <value type="QString">{8378745e-9127-4846-a2ca-c5681bd2ca3d}</value>
-=======
-  <value type="QString">{f469bce1-e785-402d-8411-75ad4ae565e4}</value>
->>>>>>> 69ee005371910764c898fb615bb263fa877551db
  </data>
  <data>
   <variable>ProjectExplorer.Project.Updater.FileVersion</variable>
