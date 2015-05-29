@@ -10,9 +10,9 @@
 
 using namespace cv;
 
-bool rectInImage(Rect rect, Mat image) {
-  return rect.x > 0 && rect.y > 0 && rect.x+rect.width < image.cols &&
-  rect.y+rect.height < image.rows;
+bool rectInImage(Rect rect, Mat* image) {
+  return rect.x > 0 && rect.y > 0 && rect.x+rect.width < image->cols &&
+  rect.y+rect.height < image->rows;
 }
 
 bool inMat(Point p,int rows,int cols) {

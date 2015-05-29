@@ -109,7 +109,7 @@ void testPossibleCentersFormula(int x, int y, const Mat &weight,double gx, doubl
   }
 }
 
-Point findEyeCenter(Mat face, Rect eye, std::string debugWindow) {
+Point findEyeCenter(Mat &face, Rect eye, std::string debugWindow) {
   Mat eyeROIUnscaled = face(eye);
   Mat eyeROI;
   scaleToFastSize(eyeROIUnscaled, eyeROI);
@@ -127,7 +127,7 @@ Point findEyeCenter(Mat face, Rect eye, std::string debugWindow) {
   //double gradientThresh = 0;
   //normalize
   for (int y = 0; y < eyeROI.rows; ++y) {
-    double *Xr = gradientX.ptr<double>(y), *Yr = gradientY.ptr<double>(y);
+    double *Xr = gradientX.ptr<double>(y), *Yr = gradientY.ptr<double>(y); // not vector?
     const double *Mr = mags.ptr<double>(y);
     for (int x = 0; x < eyeROI.cols; ++x) {
       double gX = Xr[x], gY = Yr[x];
