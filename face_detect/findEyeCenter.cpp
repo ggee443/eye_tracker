@@ -14,8 +14,11 @@
 
 using namespace cv;
 
+Point p_pred;
+
 // Pre-declarations
 Mat floodKillEdges(Mat &mat);
+Point kalmanPostProcess(Point&);
 
 #pragma mark Visualization
 
@@ -231,3 +234,13 @@ Mat floodKillEdges(Mat &mat) {
   }
   return mask;
 }
+
+// pass point through kalman filter
+Point kalmanPostProcess(Point &pp)
+{
+
+
+    return p_pred;
+}
+
+

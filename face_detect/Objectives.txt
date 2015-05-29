@@ -1,0 +1,24 @@
+Game Interface
+
+    Initialization:
+        [incomplete] Welcome screen - prompt user to center face on screen
+        [incomplete] Perform face detection - define face search space
+            a) collect N frames
+            b) avg rects --> return roi
+            c) check that face is not too large/small
+        [incomplete] Screen Calibration - promp user to look at 5 pts to define gaze search space
+            a) estimate corners by avg over N frames
+            b) initialize linear model for gaze estimation
+
+    Play:
+        [incomplete] Perform eye detection - define eye search space and compute eye center
+            a) use kalman filter for more accurate center estimation
+        [incomplete] Determine gaze - use linear model to map center to gaze
+            a) draw gaze within screen boundary
+        [incomplete] Check for valid stare
+            a) determine and report if gaze is outside stare boundary
+            b) determine and report if blink occured
+            c) report duration of stare
+        [incomplete] Increase difficulty as a function of time
+            (outline later)
+            ideas: add pop up distractions, shrink or move stare boundary (not if accuracy sucks)
