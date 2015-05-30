@@ -192,8 +192,8 @@ bool initializeGame()
     faceROI.y = (int)( (double)face_avg.y/face_count );
 
 
-    eyeROI.width = faceROI.width; eyeROI.height = (int)(0.3*faceROI.height);    // only use upper half of face roi
-    eyeROI.x = faceROI.x; eyeROI.y = (int)(1.37*faceROI.y);
+    eyeROI.width = faceROI.width; eyeROI.height = (int)(0.4*faceROI.height);    // only use upper half of face roi
+    eyeROI.x = faceROI.x; eyeROI.y = (int)(1.2*faceROI.y);
 
 #ifdef DEBUG
     cout << "initGame: averaging " << fixed << face_count << endl;
@@ -260,7 +260,7 @@ Point detectEyeCenter()
     Rect eye;
     clock_t start;
     double dur;
-    Mat eye_roi;
+    Mat eye_search_space;
 
     for( size_t j = 0; j < eyes.size(); j++ )
     {
@@ -274,19 +274,21 @@ Point detectEyeCenter()
 
 #ifdef DEBUG
            start = clock();
-           eye_roi = frame(eyeROI);
-           eye_center = findEyeCenter(eye_roi, eyes[j], "Debug Window");
-           dur = ( clock()-start )*1000./(double)CLOCKS_PER_SEC;
-           cout << "Eye Center: " << fixed << dur << "ms\n";
-#else
-           // Find Eye Center
-   //            Point eye_center( eyes[j].width/2, eyes[j].height/2 );  // middle of eye rectangle
-           eye_center = findEyeCenter(eye_roi, eyes[j], "Debug Window");
-#endif
-
+           eye_search_space = frame(eyeROI);
+           eye_center = findEyeCenter(eye_search_space, eyes[j], "Debug Window");
            // Shift relative to eye
            eye_center.x += eyes[j].x + eyeROI.x;
            eye_center.y += eyes[j].y + eyeROI.y;
+           dur = ( clock()-start )*1000./(double)CLOCKS_PER_SEC;
+           cout << "Eye Center: " << fixed << dur << "ms\n"; printf("(%d,%d)\n",eye_center.x,eye_center.y);
+#else
+           // Find Eye Center
+   //            Point eye_center( eyes[j].width/2, eyes[j].height/2 );  // middle of eye rectangle
+           eye_center = findEyeCenter(face, eyes[j], "Debug Window");
+           // Shift relative to eye
+           eye_center.x += eyes[j].x + eyeROI.x;
+           eye_center.y += eyes[j].y;
+#endif
 
            // Draw Eye Center
            crosshair1.x = eye_center.x;
