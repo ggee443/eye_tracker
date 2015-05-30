@@ -112,10 +112,9 @@ void testPossibleCentersFormula(int x, int y, const Mat &weight,double gx, doubl
   }
 }
 
-Point findEyeCenter(Mat &face, Rect eye, std::string debugWindow) {
-  Mat eyeROIUnscaled = face(eye);
+Point findEyeCenter(Mat &unscaled_eye_roi, Rect &eye, std::string debugWindow) {
   Mat eyeROI;
-  scaleToFastSize(eyeROIUnscaled, eyeROI);
+  scaleToFastSize(unscaled_eye_roi, eyeROI);
   // draw eye region
 //  rectangle(face,eye,1234);
   //-- Find the gradient
@@ -189,7 +188,7 @@ Point findEyeCenter(Mat &face, Rect eye, std::string debugWindow) {
     threshold(out, floodClone, floodThresh, 0.0f, THRESH_TOZERO);
     if(kPlotVectorField) {
       //plotVecField(gradientX, gradientY, floodClone);
-      imwrite("eyeFrame.png",eyeROIUnscaled);
+      imwrite("eyeFrame.png",unscaled_eye_roi);
     }
     Mat mask = floodKillEdges(floodClone);
     //imshow(debugWindow + " Mask",mask);

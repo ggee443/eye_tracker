@@ -27,7 +27,7 @@ bool initializeGame();
 int calibrate();
 int detectAndDisplay( Mat &frame );
 int detectFace( Rect &face );
-Point detectEyeCenter(vector<Rect> &eyes);
+Point detectEyeCenter();
 Point getGaze(int x, int y);
 void waitForSpace();
 void initKalmanFilter(Point&);
@@ -96,7 +96,8 @@ int main( void )
 
 
 #ifdef DEBUG
-  cout << "game init: " << boolalpha << initializeGame() << endl;
+  cout << "Game is initialized: " << boolalpha << initializeGame() << endl;
+
 #endif
 
 #ifdef GAME_PLAY
@@ -173,11 +174,9 @@ bool initializeGame()
             {
                 //if(detectFace(face) <= 0){ continue; }
                 detectFace(face);
-
-                face_avg.x += face.x;
-                face_avg.y += face.y;
+                face_avg.width += face.width; face_avg.height += face.height;
+                face_avg.x += face.x; face_avg.y += face.y;
                 face_count++;
-
             }
             else { cerr << " --(!) Could not read frame\n" <<endl; return false; }
         }
@@ -185,21 +184,25 @@ bool initializeGame()
 
         dd = (clock()-ss) / (double)CLOCKS_PER_SEC;
 
-    } while(dd < 3 && waitKey(1)!='q');
+    } while(dd < 1 && waitKey(1)!='q');
 
-#ifdef DEBUG
-    cout << "initGame: averaging " << fixed << face_count << endl;
-#endif
-
+    faceROI.width = (int)( (double)face_avg.width/face_count );
+    faceROI.height = (int)( (double)face_avg.height/face_count );
     faceROI.x = (int)( (double)face_avg.x/face_count );
     faceROI.y = (int)( (double)face_avg.y/face_count );
 
-    eyeROI.x = faceROI.x;
-    eyeROI.y = (int)(0.7*faceROI.y);    // only use upper half of face roi
 
-//    rectangle( frame, face_avg,  Scalar( 0, 255, 255 ), 2, 8, 0 );
-//    imshow("init complete", frame); waitKey(0);
+    eyeROI.width = faceROI.width; eyeROI.height = (int)(0.3*faceROI.height);    // only use upper half of face roi
+    eyeROI.x = faceROI.x; eyeROI.y = (int)(1.37*faceROI.y);
 
+#ifdef DEBUG
+    cout << "initGame: averaging " << fixed << face_count << endl;
+
+    printf("faceROI: %d,%d\n",faceROI.width,faceROI.height);
+    printf("eyeROI: %d,%d\n",eyeROI.width,eyeROI.height);
+    rectangle( frame, faceROI,  Scalar( 255, 0, 0 ), 1, 8, 0 );
+    imshow("init complete", frame);waitKey(1000);
+#endif
 
     if(calibrate() < 0){ return false; }
 
@@ -251,50 +254,54 @@ int detectFace(Rect &face)
 }
 
 // takes a vector of two eyes
-Point detectEyeCenter(vector<Rect> &eyes)
+Point detectEyeCenter()
 {
     Point eye_center;
     Rect eye;
+    clock_t start;
+    double dur;
+    Mat eye_roi;
+
     for( size_t j = 0; j < eyes.size(); j++ )
     {
           //-- Draw the eyes
-//           eye.x = eyes[j].x + faces[i].x;
-//           eye.y = eyes[j].y + faces[i].y;
-//           eye.width = eyes[j].width;
-//           eye.height = eyes[j].height;
-//   //            rectangle( frame, eye, Scalar( 255, 0, 255 ), 2, 8, 0 );
+           eye.x = eyes[j].x + eyeROI.x;
+           eye.y = eyes[j].y + eyeROI.y;
+           eye.width = eyes[j].width;
+           eye.height = eyes[j].height;
+           rectangle( frame, eye, Scalar( 255, 0, 255 ), 1, 8, 0 );
 
 
-//#ifdef DEBUG
-//           start = clock();
-//           eye_center = findEyeCenter(frame(eyeROI), eyes[j], "Debug Window");
-//           dur = ( clock()-start )*1000./(double)CLOCKS_PER_SEC;
-//           cout << "Eye Center: " << fixed << dur << "ms\n";
-//#else
-//           // Find Eye Center
-//   //            Point eye_center( eyes[j].width/2, eyes[j].height/2 );  // middle of eye rectangle
-//           eye_center = findEyeCenter(faceROI, eyes[j], "Debug Window");
-//#endif
+#ifdef DEBUG
+           start = clock();
+           eye_roi = frame(eyeROI);
+           eye_center = findEyeCenter(eye_roi, eyes[j], "Debug Window");
+           dur = ( clock()-start )*1000./(double)CLOCKS_PER_SEC;
+           cout << "Eye Center: " << fixed << dur << "ms\n";
+#else
+           // Find Eye Center
+   //            Point eye_center( eyes[j].width/2, eyes[j].height/2 );  // middle of eye rectangle
+           eye_center = findEyeCenter(eye_roi, eyes[j], "Debug Window");
+#endif
 
-//           // Shift relative to eye
-//           eye_center.x += faces[i].x + eyes[j].x;
-//           eye_center.y += faces[i].y + eyes[j].y;
+           // Shift relative to eye
+           eye_center.x += eyes[j].x + eyeROI.x;
+           eye_center.y += eyes[j].y + eyeROI.y;
 
-//           // Draw Eye Center
-//           crosshair1.x = eye_center.x;
-//           crosshair1.y = eye_center.y-5;
-//           crosshair2.x = eye_center.x;
-//           crosshair2.y = eye_center.y+5;
-//           line( frame, crosshair1, crosshair2, Scalar( 0, 255, 0 ), 1, 8, 0 );
-//           crosshair1.x = eye_center.x-5;
-//           crosshair1.y = eye_center.y;
-//           crosshair2.x = eye_center.x+5;
-//           crosshair2.y = eye_center.y;
-//           line( frame, crosshair1, crosshair2, Scalar( 0, 255, 0 ), 1, 8, 0 );
+           // Draw Eye Center
+           crosshair1.x = eye_center.x;
+           crosshair1.y = eye_center.y-5;
+           crosshair2.x = eye_center.x;
+           crosshair2.y = eye_center.y+5;
+           line( frame, crosshair1, crosshair2, Scalar( 0, 255, 0 ), 1, 8, 0 );
+           crosshair1.x = eye_center.x-5;
+           crosshair1.y = eye_center.y;
+           crosshair2.x = eye_center.x+5;
+           crosshair2.y = eye_center.y;
+           line( frame, crosshair1, crosshair2, Scalar( 0, 255, 0 ), 1, 8, 0 );
 
     }
     cout <<"\n";
-
     //-- Show what you got
     imshow( window_name, frame );
 
@@ -313,7 +320,7 @@ Point getGaze(int x, int y) {
         gaze.y = y;
         circle(game_frame, gaze, 10, Scalar(255, 255, 255), 20);
     }
-    imshow( game_window, game_frame );//waitKey(1);
+    imshow( game_window, game_frame );waitKey(1);
 
     start = clock();
     do {
@@ -321,13 +328,13 @@ Point getGaze(int x, int y) {
         //read frame
         if(!cap.read(frame)) { cerr<< "unable to read frame\n"; return Point(); } //Point(NULL,NULL); }
 
-        rectangle( frame, eyeROI,  Scalar( 0, 255, 255 ), 2, 8, 0 );
+        rectangle( frame, eyeROI,  Scalar( 0, 255, 0 ), 1, 8, 0 );
         imshow("eye gaze",frame);
 #ifdef DEBUG
         temp = clock();
         eyes_cascade.detectMultiScale( frame(eyeROI), eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80) );
         dur = ( clock()-temp )*1000./(double)CLOCKS_PER_SEC;
-        cout << "Eye Cascade: " << fixed << dur << "ms\t" << eyes.size() << "eyes found\n";
+        cout << "Eye Cascade: " << fixed << dur << "ms\t" << eyes.size() << " eyes found\n";
 #else
         //-- In each face, detect eyes
         eyes_cascade.detectMultiScale( frame(eyeROI), eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80) );
@@ -335,14 +342,16 @@ Point getGaze(int x, int y) {
 
         if( eyes.size() == 2)
         {
-            // detect the centers
+            gazeCal = detectEyeCenter();
         }
 
         dur = (clock()-start) / (double)CLOCKS_PER_SEC;
 
-    } while(dur < 10 && waitKey(1)!='q');
+    } while(dur < 1 && waitKey(1)!='q');
 
-
+#ifdef DEBUG
+    cout << "gaze cal done\n";
+#endif
     return gazeCal;
 }
 
