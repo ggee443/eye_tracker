@@ -1,10 +1,10 @@
 Game Interface
 
     Initialization:
-        [incomplete] Welcome screen - prompt user to center face on screen
+        [complete] Welcome screen - prompt user to center face on screen
         [incomplete] Perform face detection - define face search space
-            a) collect N frames
-            b) avg rects --> return roi
+            FIN a) collect N frames
+            FIN b) avg rects --> return roi
             c) check that face is not too large/small
         [incomplete] Screen Calibration - promp user to look at 5 pts to define gaze search space
             a) estimate corners by avg over N frames
@@ -22,3 +22,10 @@ Game Interface
         [incomplete] Increase difficulty as a function of time
             (outline later)
             ideas: add pop up distractions, shrink or move stare boundary (not if accuracy sucks)
+
+
+
+
+so outside eye is much more exhagerated
+(ie. looking left, right eye will be near center)
+finding eye center is still pretty inaccurate when not looking near center
