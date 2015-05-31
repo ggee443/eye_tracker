@@ -9,8 +9,8 @@ set( OBJ_DET_SRC face_detect/objectDetection2.cpp
 		 face_detect/helpers.cpp 
 )
 # save all binaries to bin folder in top level of project
-set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test )
-#set( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
+#set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test )
+set( EXECUTABLE_OUTPUT_PATH ${PROJECT_BINARY_DIR}/bin )
 
 ## Build ##
 include_directories(

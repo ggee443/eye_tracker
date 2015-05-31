@@ -25,7 +25,4 @@ Game Interface
 
 
 
-
-so outside eye is much more exhagerated
-(ie. looking left, right eye will be near center)
-finding eye center is still pretty inaccurate when not looking near center
+classifier is bad at detecting eyes when looking down, keep face in lower half of image, not too close to screen
