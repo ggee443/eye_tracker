@@ -196,26 +196,26 @@ bool initializeGame() {
         }
         waitForSpace();
 
-        // Artificial Calibration:
-        gazeCalibrationsLeftEye[0][0] = .45;
-        gazeCalibrationsLeftEye[0][1] = .45;
-        gazeCalibrationsRightEye[0][0] = .46;
-        gazeCalibrationsRightEye[0][1] = .45;
-        gazeCalibrationsLeftEye[1][0] = .55;
-        gazeCalibrationsLeftEye[1][1] = .45;
-        gazeCalibrationsRightEye[1][0] = .56;
-        gazeCalibrationsRightEye[1][1] = .45;
-        gazeCalibrationsLeftEye[2][0] = .45;
-        gazeCalibrationsLeftEye[2][1] = .55;
-        gazeCalibrationsRightEye[2][0] = .46;
-        gazeCalibrationsRightEye[2][1] = .55;
-        gazeCalibrationsLeftEye[3][0] = .55;
-        gazeCalibrationsLeftEye[3][1] = .55;
-        gazeCalibrationsRightEye[3][0] = .56;
-        gazeCalibrationsRightEye[3][1] = .55;
+//        // Artificial Calibration:
+//        gazeCalibrationsLeftEye[0][0] = .45;
+//        gazeCalibrationsLeftEye[0][1] = .45;
+//        gazeCalibrationsRightEye[0][0] = .46;
+//        gazeCalibrationsRightEye[0][1] = .45;
+//        gazeCalibrationsLeftEye[1][0] = .55;
+//        gazeCalibrationsLeftEye[1][1] = .45;
+//        gazeCalibrationsRightEye[1][0] = .56;
+//        gazeCalibrationsRightEye[1][1] = .45;
+//        gazeCalibrationsLeftEye[2][0] = .45;
+//        gazeCalibrationsLeftEye[2][1] = .55;
+//        gazeCalibrationsRightEye[2][0] = .46;
+//        gazeCalibrationsRightEye[2][1] = .55;
+//        gazeCalibrationsLeftEye[3][0] = .55;
+//        gazeCalibrationsLeftEye[3][1] = .55;
+//        gazeCalibrationsRightEye[3][0] = .56;
+//        gazeCalibrationsRightEye[3][1] = .55;
 
         // Calibrate Gaze
-//        if(calibrate() < 0){ return false; }
+        if(calibrate() < 0){ return false; }
 
         left_side_frac_LE = (gazeCalibrationsLeftEye[0][0] + gazeCalibrationsLeftEye[2][0])/2.;
         right_side_frac_LE = (gazeCalibrationsLeftEye[1][0] + gazeCalibrationsLeftEye[3][0])/2.;
@@ -227,9 +227,9 @@ bool initializeGame() {
         top_side_frac_RE = (gazeCalibrationsRightEye[0][1] + gazeCalibrationsRightEye[1][1])/2.;
         bot_side_frac_RE = (gazeCalibrationsRightEye[2][1] + gazeCalibrationsRightEye[3][1])/2.;
 
-//#ifdef DEBUG
-        // Check Calibrations
-        checkCalibrations();
+////#ifdef DEBUG
+//        // Check Calibrations
+//        checkCalibrations();
 
         int side = 800;
         tempL.x = width_screen/2-side/2 + left_side_frac_LE * side;
