@@ -2,11 +2,11 @@ Game Interface
 
     Initialization:
         [complete] Welcome screen - prompt user to center face on screen
-        [incomplete] Perform face detection - define face search space
+        [complete] Perform face detection - define face search space
             FIN a) collect N frames
             FIN b) avg rects --> return roi
             c) check that face is not too large/small
-        [incomplete] Screen Calibration - promp user to look at 5 pts to define gaze search space
+        [complete] Screen Calibration - promp user to look at 5 pts to define gaze search space
             a) estimate corners by avg over N frames
             b) initialize linear model for gaze estimation
 
