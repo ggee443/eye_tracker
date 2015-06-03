@@ -34,6 +34,7 @@ void initKalmanFilter(Point&);
 int startGame();
 void sleep_for(unsigned int seconds);
 void checkCalibrations();
+void checkCalibrationsMid();
 void testFindEyeCenter();
 
 void drawEyeCenter(Point eye_center);
@@ -83,8 +84,12 @@ double gazeCalibrationsRightEye[5][2];
 KalmanFilter RKF(4,2,0);
 KalmanFilter LKF(4,2,0);
 
+bool mid_not_corners = true;
+
 char overlay_str[100];
 int score;
+
+double xbound,ybound;
 
 
 
@@ -108,11 +113,6 @@ int main( void )
   // Play Game
   do {
     score = startGame();
-
-
-    sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", score);
-    displayOverlay(game_window, overlay_str, -1);
-    imshow( game_window, game_frame ); waitKey(1);
 
     cc = 0;
     while((char)cc != 'y' && (char)cc != 'n') {
@@ -228,8 +228,12 @@ bool initializeGame() {
         bot_side_frac_RE = (gazeCalibrationsRightEye[2][1] + gazeCalibrationsRightEye[3][1])/2.;
 
 ////#ifdef DEBUG
-//        // Check Calibrations
-//        checkCalibrations();
+        // Check Calibrations
+        if(mid_not_corners) {
+            checkCalibrationsMid();
+        } else {
+            checkCalibrations();
+        }
 
         int side = 800;
         tempL.x = width_screen/2-side/2 + left_side_frac_LE * side;
@@ -313,12 +317,16 @@ int detectFace(Rect &face) {
 
 // initializes gaze calibration points for screen corners and center
 int calibrate() {
-    // Perform calibration
-    getGaze(20,50,0);
-    getGaze(width_screen-20,50,1);
-    getGaze(20,height_screen-20,2);
-    getGaze(width_screen-20,height_screen-20,3);
-//    gazeCalibrations[4] = getGaze(width_screen/2,height_screen/2);
+    if(mid_not_corners) {
+        // Middle
+        getGaze(width_screen/2,height_screen/2,4);
+    } else {
+        // Corners
+        getGaze(20,50,0);
+        getGaze(width_screen-20,50,1);
+        getGaze(20,height_screen-20,2);
+        getGaze(width_screen-20,height_screen-20,3);
+    }
 
     return 0;
 }
@@ -329,7 +337,8 @@ void getGaze(int x, int y, int index) {
     double gaze_count = 0.;
     Point eye_center_L, eye_center_R;
     clock_t start;
-    double dur, border, fraction[4]; //fr[0:2) --> L(x/W,y/H); fr[2:4) --> R(x/W,y/H)
+    double dur, temp,  fraction[4]; //fr[0:2) --> L(x/W,y/H); fr[2:4) --> R(x/W,y/H)
+    xbound=0, ybound=0;
 
     // Display the circle
     game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
@@ -391,7 +400,7 @@ void getGaze(int x, int y, int index) {
             fraction[3] = (double)eye_center_R.y / (double)rightEye.height;
 
             // Check center is not excessively close to ROI border (eyebrows or something)
-            border = 0.25;
+            double border = 0.25;
             if(fraction[0] < border || fraction[0] > (1.-border) ||
                     fraction[1] < border || fraction[1] > (1.-border) ||
                     fraction[2] < border || fraction[2] > (1.-border) ||
@@ -399,13 +408,24 @@ void getGaze(int x, int y, int index) {
                 continue;
             }
 
-            // Accumulate eye_center ratios for each eye
-            // Update gazeCalibrationsLeftEye
-            gazeCalibrationsLeftEye[index][0] += fraction[0];
-            gazeCalibrationsLeftEye[index][1] += fraction[1];
-            // Update gazeCalibrationsRightEye
-            gazeCalibrationsRightEye[index][0] += fraction[2];
-            gazeCalibrationsRightEye[index][1] += fraction[3];
+            if(!mid_not_corners) {
+                // Find Average Value of Point
+
+                // Accumulate eye_center ratios for each eye
+                // Update gazeCalibrationsLeftEye
+                gazeCalibrationsLeftEye[index][0] += fraction[0];
+                gazeCalibrationsLeftEye[index][1] += fraction[1];
+                // Update gazeCalibrationsRightEye
+                gazeCalibrationsRightEye[index][0] += fraction[2];
+                gazeCalibrationsRightEye[index][1] += fraction[3];
+            } else {
+                // Find max distance from center
+                gazeCalibrationsLeftEye[index][0] = max( abs(0.5-fraction[0]), gazeCalibrationsLeftEye[index][0] );
+                gazeCalibrationsLeftEye[index][1] = max( abs(0.5-fraction[1]), gazeCalibrationsLeftEye[index][1] );
+
+                gazeCalibrationsRightEye[index][0] = max( abs(0.5-fraction[2]), gazeCalibrationsRightEye[index][0] );
+                gazeCalibrationsRightEye[index][1] = max( abs(0.5-fraction[3]), gazeCalibrationsRightEye[index][1] );
+            }
 
             gaze_count++;
 
@@ -441,12 +461,6 @@ void getGaze(int x, int y, int index) {
         drawEyeCenter(eye_center_R);
 
         imshow("eye gaze",frame);
-
-//        if(eyes.size() == 2) {
-//            char str[16];
-//            sprintf(str, "%d", (int)(1000000*x + 1000*y + gaze_count/2));
-//            imshow(str,frame);
-//        }
 #endif
 
 
@@ -464,11 +478,14 @@ void getGaze(int x, int y, int index) {
 
     } while(gaze_count < 15. && waitKey(1)!='q');
 
-    // Obtian average eye_center ratio for
-    gazeCalibrationsLeftEye[index][0] /= gaze_count;
-    gazeCalibrationsLeftEye[index][1] /= gaze_count;
-    gazeCalibrationsRightEye[index][0] /= gaze_count;
-    gazeCalibrationsRightEye[index][1] /= gaze_count;
+
+    if(!mid_not_corners) {
+        // Obtian average eye_center ratio for
+        gazeCalibrationsLeftEye[index][0] /= gaze_count;
+        gazeCalibrationsLeftEye[index][1] /= gaze_count;
+        gazeCalibrationsRightEye[index][0] /= gaze_count;
+        gazeCalibrationsRightEye[index][1] /= gaze_count;
+    }
 
     return;
 }
@@ -586,6 +603,53 @@ void checkCalibrations() {
 }
 
 
+// Visually display colored quadrants in game window
+// Display associated eye center fractions, brighter colors are right eye
+void checkCalibrationsMid() {
+    Scalar colorL = Scalar(0,255,0);
+    Scalar colorR = Scalar(0,0,255);
+
+    // Clear Frame
+    game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
+    displayOverlay(game_window, "Results\nLeft Eye: green  \nRight Eye: red", -1);
+
+    // Display Quadrants
+    int side = 800;
+    rectangle( game_frame, Rect(width_screen/2-side/2, height_screen/2-side/2, side/2, side/2),  Scalar( 255,255,255 ), 2, 8, 0 );
+    rectangle( game_frame, Rect(width_screen/2,        height_screen/2-side/2, side/2, side/2),  Scalar( 255,255,255 ), 2, 8, 0 );
+    rectangle( game_frame, Rect(width_screen/2-side/2, height_screen/2,        side/2, side/2),  Scalar( 255,255,255 ), 2, 8, 0 );
+    rectangle( game_frame, Rect(width_screen/2,        height_screen/2,        side/2, side/2),  Scalar( 255,255,255 ), 2, 8, 0 );
+
+    // Report Fractional Coordinates
+    printf("Left Eye:\n");
+    printf("Middle: (%1.2f,%1.2f)\n", gazeCalibrationsLeftEye[4][0], gazeCalibrationsLeftEye[4][1]);
+    printf("Right Eye:\n");
+    printf("Middle: (%1.2f,%1.2f)\n", gazeCalibrationsRightEye[4][0], gazeCalibrationsRightEye[4][1]);
+
+    // Display Crosshairs of Eye Center Averages
+
+    // BL -> (0,0)
+
+    rectangle( game_frame,
+               Rect(-gazeCalibrationsLeftEye[4][0]*side + width_screen/2,
+                    -gazeCalibrationsLeftEye[4][1]*side + height_screen/2,
+                    2.*gazeCalibrationsLeftEye[4][0]*side,
+                    2.*gazeCalibrationsLeftEye[4][1]*side),
+              colorL, 1, 8, 0 );
+
+    rectangle( game_frame,
+               Rect(-gazeCalibrationsRightEye[4][0]*side  + width_screen/2,
+                    -gazeCalibrationsRightEye[4][1]*side  + height_screen/2,
+                    2.*gazeCalibrationsRightEye[4][0]*side,
+                    2.*gazeCalibrationsRightEye[4][1]*side),
+               colorR, 1, 8, 0 );
+
+
+    imshow( game_window, game_frame ); waitKey(1);
+    waitForSpace();
+}
+
+
 /*
 bool testFindEyeCenter(VideoCapture &cap) {
     Mat roi;
@@ -635,13 +699,30 @@ bool testFindEyeCenter(VideoCapture &cap) {
 
 
 int startGame() {
+    int your_score = 0;
+    Point eye_center;
+    Rect eye;
+    double xBound = max(gazeCalibrationsLeftEye[4][0], gazeCalibrationsRightEye[4][0]);
+    double yBound = max(gazeCalibrationsLeftEye[4][1], gazeCalibrationsRightEye[4][1]);
+    int side = 800;
+
+    xBound = 1.2*xBound;
+    yBound = 1.2*yBound;
+
+    // Prompt to start
     game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
     displayOverlay(game_window, "Great!  Let the game begin! Press 'space' to start", -1);
+    // Draw boundary region
+    rectangle( game_frame,
+               Rect(-xBound*side + width_screen/2,
+                    -yBound*side + height_screen/2,
+                    2.*xBound*side,
+                    2.*yBound*side),
+               (0,255,255), 3, 7, 0 );
     imshow( game_window, game_frame ); waitKey(1);
     waitForSpace();
 
-    char str[50];
-    int your_score = 0;
+
 
     while((char)cc != 'q'){
         // Read Frame / Pre-Process
@@ -654,11 +735,6 @@ int startGame() {
         // Find Eyes
         eyes_cascade.detectMultiScale(eye_search_space, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80));
 
-        // Catch a blink
-        if(eyes.size() == 0) {
-            break;
-        }
-
         // Draw Eyes and Display
         for( size_t j = 0; j < eyes.size(); j++ )
         {
@@ -666,10 +742,96 @@ int startGame() {
         }
         imshow( "Eye Search Space", eye_search_space );
 
+        // Catch a blink
+        if(eyes.size() == 0) {
+            sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", score);
+            break;
+        }
+
+        // Check Gaze
+        if( eyes.size() == 2) {
+
+            eye = eyes[0];
+            // Find Eye Center
+            eye_center = findEyeCenter(eye_search_space, eye, "_");
+
+//            // Draw boundary region
+//            rectangle( game_frame,
+//                       Rect(-xBound*side + width_screen/2,
+//                            -yBound*side + height_screen/2,
+//                            2.*xBound*side,
+//                            2.*yBound*side),
+//                       (0,255,255), 3, 7, 0 );
+            circle(game_frame, gaze, 2, Scalar(255, 0, 255), 1);
+            imshow( game_window, game_frame ); waitKey(1);
+
+
+            // Check in bounds
+            if(eye_center.x < (0.5-xBound)*eye.width) {
+                sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", score);
+
+//                printf("xbound: %f\n", xBound);
+                printf("eye_width: %d\n", eye.width);
+                printf("xBound: %d\n", (int)((0.5-xBound)*eye.width));
+                printf("xEyeCenter: %d\n", eye_center.x);
+
+                break;
+            }
+            if(eye_center.x > (0.5+xBound)*eye.width) {
+                sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", score);
+
+//                printf("xbound: %f\n", xBound);
+                printf("eye_width: %d\n", eye.width);
+                printf("xBound: %d\n", (int)((0.5+xBound)*eye.width));
+                printf("xEyeCenter: %d\n", eye_center.x);
+
+                break;
+            }
+            if(eye_center.y < (0.5-yBound)*eye.height) {
+                sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", score);
+                printf("eye_width: %d\n", eye.height);
+                printf("yBound: %d\n", (int)((0.5-yBound)*eye.height));
+                printf("yEyeCenter: %d\n", eye_center.y);
+                break;
+            }
+            if(eye_center.y > (0.5+yBound)*eye.height) {
+                sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", score);
+                printf("eye_width: %d\n", eye.height);
+                printf("yBound: %d\n", (int)((0.5+yBound)*eye.height));
+                printf("yEyeCenter: %d\n", eye_center.y);
+                break;
+            }
+
+            eye = eyes[1];
+            // Find Eye Center
+            eye_center = findEyeCenter(eye_search_space, eye, "_");
+            // Check in bounds
+            if(eye_center.x < (0.5-xBound)*eye.width) {
+                sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", score);
+                break;
+            }
+            if(eye_center.x > (0.5+xBound)*eye.width) {
+                sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", score);
+                break;
+            }
+            if(eye_center.y < (0.5-yBound)*eye.height) {
+                sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", score);
+                break;
+            }
+            if(eye_center.y > (0.5+yBound)*eye.height) {
+                sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", score);
+                break;
+            }
+        }
+
         your_score++;
 
         cc = waitKey(1);
     }
+
+
+    displayOverlay(game_window, overlay_str, -1);
+    imshow( game_window, game_frame ); waitKey(1);
 
     return your_score;
 

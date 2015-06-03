@@ -17,8 +17,8 @@ Game Interface
             a) draw gaze within screen boundary
         [incomplete] Check for valid stare
             a) determine and report if gaze is outside stare boundary
-            b) determine and report if blink occured
-            c) report duration of stare
+            b) determine and report if blink occured (done)
+            c) report duration of stare (done)
         [incomplete] Increase difficulty as a function of time
             (outline later)
             ideas: add pop up distractions, shrink or move stare boundary (not if accuracy sucks)
