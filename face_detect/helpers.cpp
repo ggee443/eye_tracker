@@ -8,6 +8,7 @@
 
 #include "constants.h"
 
+using namespace std;
 using namespace cv;
 
 bool rectInImage(Rect rect, Mat* image) {
@@ -38,6 +39,14 @@ double computeDynamicThreshold(const Mat &mat, double stdDevFactor) {
   meanStdDev(mat, meanMagnGrad, stdMagnGrad);
   double stdDev = stdMagnGrad[0] / sqrt(mat.rows*mat.cols);
   return stdDevFactor * stdDev + meanMagnGrad[0];
+}
+
+void waitForSpace() {
+    int cc;
+    while((char)cc != ' ') {
+        cc = waitKey(1);
+    }
+    cc = 0;
 }
 
 

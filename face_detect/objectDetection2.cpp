@@ -17,6 +17,10 @@
 
 #include "findEyeCenter.h"
 #include "findEyeCorner.h"
+#include "constants.h"
+#include "helpers.h"
+#include "globals.h"
+#include "initialize.h"
 
 #define DEBUG
 
@@ -24,12 +28,8 @@ using namespace std;
 using namespace cv;
 
 /** Function Headers */
-bool initializeGame();
-bool findFaceROI(int averaging_duration);
 int calibrate();
-int detectFace( Rect &face );
 void getGaze(int x, int y, int index);
-void waitForSpace();
 void initKalmanFilter(Point&);
 int startGame();
 void sleep_for(unsigned int seconds);
@@ -40,45 +40,27 @@ void testFindEyeCenter();
 void drawEyeCenter(Point eye_center);
 
 /** Global variables */
-String face_cascade_path = "/home/ee443/FinalProjectEE443/eye_tracker/src/face_detect/data/lbpcascades/";
-String eye_cascade_path = "/home/ee443/FinalProjectEE443/eye_tracker/src/face_detect/data/haarcascades/";
-//String eye_cascade_path = "/home/ee443/FinalProjectEE443/eye_tracker/src/face_detect/data/haarcascades_cuda/";
-
-String face_cascade_name = "lbpcascade_frontalface.xml";
-String eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
-//String eyes_cascade_name = "haarcascade_eye.xml";
-//String eyes_cascade_name = "haarcascade_lefteye_2splits.xml";
-//String eyes_cascade_name = "haarcascade_righteye_2splits.xml";
-
-CascadeClassifier face_cascade;
-CascadeClassifier eyes_cascade;
 string window_name = "Capture - Face detection";
-string game_window = "Eye Tracking Game";
+cv::CascadeClassifier eyes_cascade;
 
 RNG rng(12345);
 
 // Initialize Mem
-vector<Rect> faces, eyes;
-Mat frame, frame_gray, eye_search_space;
+vector<Rect> eyes;
+Mat frame, eye_search_space;
 Point crosshair1, crosshair2;
 int cc;
 
-VideoCapture cap(0);
-
 // Search space
 Rect gameROI;
-Rect faceROI, eyeROI;
+Rect eyeROI;
 Rect leftEye, rightEye;
 
 // Game
-int width_screen = 1590;
-int height_screen = 1100;
-Mat game_frame;
 Point gaze;
 
-// TopLeft, TopRight, BottomLeft, BottomRight, Middle
-double gazeCalibrationsLeftEye[5][2];
-double gazeCalibrationsRightEye[5][2];
+// x range, y range
+double gazeCalibrations[2];
 
 // Kalman objs
 KalmanFilter RKF(4,2,0);
@@ -97,222 +79,39 @@ int score;
  */
 int main( void )
 {
+   Mat game_frame;
+
+
 //  cap.open();
   cout.precision(numeric_limits<double>::digits10);
 
   // Load the cascade
-  if( !face_cascade.load( face_cascade_path + face_cascade_name ) ){ printf("--(!)objectDetection2:Error loading face_cascade files\n"); return -1; };
   if( !eyes_cascade.load( eye_cascade_path + eyes_cascade_name ) ){ printf("--(!)objectDetection2:Error loading eyes_cascade files\n"); return -1; };
 
 
   // Initialize Game
-  cout << "Game is initialized: " << boolalpha << initializeGame() << endl;
+  cout << "Game is initialized: " << boolalpha << initializeGame(game_frame, eyeROI) << endl;
 
 
-  // Play Game
-  do {
-    score = startGame();
+//  // Play Game
+//  do {
+//    startGame();
 
-    cc = 0;
-    while((char)cc != 'y' && (char)cc != 'n') {
-        cc = waitKey(1);
-    }
+//    cc = 0;
+//    while((char)cc != 'y' && (char)cc != 'n') {
+//        cc = waitKey(1);
+//    }
 
 
-  } while((char)cc != 'n');
+//  } while((char)cc != 'n');
 
 
   return 0;
 }
 
 
+/*
 
-
-// Reads videofeed, performs face detection, defines search space for eyes
-bool initializeGame() {
-    double widthCrop=0.75,heightCrop=0.4,CropYShift=0.18;
-//    double widthCrop=1.,heightCrop=1.,CropYShift=0.;
-
-    // Starting Screen
-    game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
-    imshow( game_window, game_frame ); waitKey(1);
-    displayOverlay(game_window, "Welcome to the Staring Game!\n\n Press 'space' to continue.", -1);
-    waitForSpace();
-
-    // Pre - Face Finding
-    displayOverlay(game_window, "Okay we are going to try to find your face,\n so get comfortable because you can't move after this!\n\nPress 'space' to continue.", -1);
-    imshow( game_window, game_frame ); waitKey(1);
-    waitForSpace();
-    int minFaceDim = 200; //300;
-
-    // Face Finding
-    while((char)cc == 'r' || faceROI.width < minFaceDim) {
-        cc = 0;
-        displayOverlay(game_window, "Working...", -1); imshow( game_window, game_frame ); waitKey(1);
-
-        // Find Face ROI
-        if(findFaceROI(1) < 0){ return false; }
-
-        // Set eyeROI as restricted portion of faceROI
-        eyeROI.width = widthCrop*faceROI.width;
-        eyeROI.x = faceROI.x + (1.-widthCrop)/2*faceROI.width;
-        eyeROI.height = heightCrop*faceROI.height;
-        eyeROI.y = faceROI.y + CropYShift*faceROI.height;
-
-        // Display user's image, face, and eye rois on game screen
-        rectangle( frame, faceROI,  Scalar( 255, 0, 0 ), 1, 8, 0 );
-        rectangle( frame, eyeROI,  Scalar( 0, 255, 0 ), 1, 8, 0 );
-        frame.copyTo(game_frame(Rect(width_screen/2 - frame.cols/2, height_screen/2 - frame.rows/2, frame.cols, frame.rows)));
-
-        // Verify roi is approproate
-        if(faceROI.width < minFaceDim) {
-            displayOverlay(game_window, "Get closer to the screen!\n\nPress 'space' to try again.", -1);
-        } else {
-            displayOverlay(game_window, "How does this look?\n(The location of the box, we know you're beautiful)\nMake sure that both eyes are clearly in the green box.\n\nPress 'space' to continue, 'r' to try again.", -1);
-        }
-        imshow( game_window, game_frame ); waitKey(1);
-
-        cout << "FACE  w: " << faceROI.width << " h: " << faceROI.height << "\n";
-        cout << "EYES  w: " << eyeROI.width << " h: " << eyeROI.height << "\n";
-
-        while((char)cc != ' ' && (char)cc != 'r') {
-            cc = waitKey(1);
-        }
-    }
-    cc = 0;
-
-    // Calibrating
-    double left_side_frac_LE, right_side_frac_LE, top_side_frac_LE, bot_side_frac_LE;
-    double left_side_frac_RE, right_side_frac_RE, top_side_frac_RE, bot_side_frac_RE;
-    Rect tempL = Rect(0,0,0,0);
-    Rect tempR = Rect(0,0,0,0);
-    do {
-        // Pre - Gaze Calibration
-        if(tempL.x == 0) {
-            displayOverlay(game_window, "Great!  Now we are going to do some gaze calibrations.\nYou need to stare at the dot.\n\nPress 'space' to continue.", -1); imshow( game_window, game_frame ); waitKey(1);
-        } else {
-            displayOverlay(game_window, "Shoot!  Looks like we need to do that again.\n\nPress 'space' to continue.", -1); imshow( game_window, game_frame ); waitKey(1);
-        }
-        waitForSpace();
-
-//        // Artificial Calibration:
-//        gazeCalibrationsLeftEye[0][0] = .45;
-//        gazeCalibrationsLeftEye[0][1] = .45;
-//        gazeCalibrationsRightEye[0][0] = .46;
-//        gazeCalibrationsRightEye[0][1] = .45;
-//        gazeCalibrationsLeftEye[1][0] = .55;
-//        gazeCalibrationsLeftEye[1][1] = .45;
-//        gazeCalibrationsRightEye[1][0] = .56;
-//        gazeCalibrationsRightEye[1][1] = .45;
-//        gazeCalibrationsLeftEye[2][0] = .45;
-//        gazeCalibrationsLeftEye[2][1] = .55;
-//        gazeCalibrationsRightEye[2][0] = .46;
-//        gazeCalibrationsRightEye[2][1] = .55;
-//        gazeCalibrationsLeftEye[3][0] = .55;
-//        gazeCalibrationsLeftEye[3][1] = .55;
-//        gazeCalibrationsRightEye[3][0] = .56;
-//        gazeCalibrationsRightEye[3][1] = .55;
-
-        // Calibrate Gaze
-        if(calibrate() < 0){ return false; }
-
-        left_side_frac_LE = (gazeCalibrationsLeftEye[0][0] + gazeCalibrationsLeftEye[2][0])/2.;
-        right_side_frac_LE = (gazeCalibrationsLeftEye[1][0] + gazeCalibrationsLeftEye[3][0])/2.;
-        top_side_frac_LE = (gazeCalibrationsLeftEye[0][1] + gazeCalibrationsLeftEye[1][1])/2.;
-        bot_side_frac_LE = (gazeCalibrationsLeftEye[2][1] + gazeCalibrationsLeftEye[3][1])/2.;
-
-        left_side_frac_RE = (gazeCalibrationsRightEye[0][0] + gazeCalibrationsRightEye[2][0])/2.;
-        right_side_frac_RE = (gazeCalibrationsRightEye[1][0] + gazeCalibrationsRightEye[3][0])/2.;
-        top_side_frac_RE = (gazeCalibrationsRightEye[0][1] + gazeCalibrationsRightEye[1][1])/2.;
-        bot_side_frac_RE = (gazeCalibrationsRightEye[2][1] + gazeCalibrationsRightEye[3][1])/2.;
-
-////#ifdef DEBUG
-        // Check Calibrations
-        if(mid_not_corners) {
-            checkCalibrationsMid();
-        } else {
-            checkCalibrations();
-        }
-
-        int side = 800;
-        tempL.x = width_screen/2-side/2 + left_side_frac_LE * side;
-        tempL.y = height_screen/2-side/2 + top_side_frac_LE * side;
-        tempL.width = width_screen/2-side/2 + (right_side_frac_LE-left_side_frac_LE) * side;
-        tempL.height = height_screen/2-side/2 + (top_side_frac_LE-bot_side_frac_LE) * side;
-
-        rectangle( game_frame, tempL,  Scalar( 255, 255, 255 ), 1, 8, 0 );
-//#endif
-
-//    } while(left_side_frac_LE > right_side_frac_LE || bot_side_frac_LE > top_side_frac_LE);
-    } while(false);
-
-    return true;
-}
-
-void waitForSpace() {
-    while((char)cc != ' ') {
-        cc = waitKey(1);
-    }
-    cc = 0;
-}
-
-// Read frames for "averaging_duration" seconds
-// and update faceROI such that it boxes the face
-bool findFaceROI(int averaging_duration) {
-    Rect face_avg,face;
-    clock_t ss;
-    double dd;
-    double face_count = 0.;
-
-    ss = clock();
-    do
-    {
-        if(cap.isOpened())
-        {
-            if(cap.read(frame))
-            {
-                flip(frame, frame, 1);
-
-                // Find Face
-                if(detectFace(face) == 0) {
-                    // Add detected Rect to average
-                    face_avg.width += face.width; face_avg.height += face.height;
-                    face_avg.x += face.x; face_avg.y += face.y;
-                    face_count++;
-                }
-            }
-            else { cerr << " --(!) Could not read frame\n" <<endl; return false; }
-        }
-        else{ cerr << " --(!) Could not open videostream\n" <<endl; return false; }
-
-        dd = (clock()-ss) / (double)CLOCKS_PER_SEC;
-
-    } while((dd < averaging_duration || face_count==0) && waitKey(1)!='q');
-
-    faceROI.width = (int)( (double)face_avg.width/face_count );
-    faceROI.height = (int)( (double)face_avg.height/face_count );
-    faceROI.x = (int)( (double)face_avg.x/face_count );
-    faceROI.y = (int)( (double)face_avg.y/face_count );
-
-    return true;
-}
-
-// Used in findFaceROI()
-int detectFace(Rect &face) {
-    cvtColor( frame, frame_gray, COLOR_BGR2GRAY );
-
-    equalizeHist( frame_gray, frame_gray ); // maybe remove this for speed if unnecessary for quality
-
-    //-- Detect faces
-    face_cascade.detectMultiScale( frame_gray, faces, 1.1, 2, 0, Size(150, 150),Size(400,400) );
-
-
-    // for now, assume only one face is in frame
-    // later, if mult faces are in frame, then take face closest to center of frame
-
-    if(faces.size()==0){ face = Rect(); return -1; } //no face was found
-    face = faces[0]; return 0;
-}
 
 // initializes gaze calibration points for screen corners and center
 int calibrate() {
@@ -650,57 +449,9 @@ void checkCalibrationsMid() {
                     2.*gazeCalibrationsRightEye[4][1]*side),
                colorR, 1, 8, 0 );
 
-
     imshow( game_window, game_frame ); waitKey(1);
     waitForSpace();
 }
-
-
-/*
-bool testFindEyeCenter(VideoCapture &cap) {
-    Mat roi;
-    Rect face;
-    clock_t ss;
-    double dd;
-
-
-    do
-    {
-        if(cap.isOpened())
-        {
-            if(cap.read(frame))
-            {
-                flip(frame, frame, 1);
-
-                // Find Face
-                if(detectFace(face) == 0) {
-                    // Find Eyes
-                    roi = frame( face );
-                    eyes_cascade.detectMultiScale(roi, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80));
-
-                    ss = clock();
-                    // Find Left Eye Center
-                    eye_center_L = findEyeCenter(roi, leftEye, "_");
-                    dd = (clock()-ss) / (double)CLOCKS_PER_SEC;
-
-
-                    rectangle( frame, roi,  Scalar( 255, 0, 0 ), 1, 8, 0 );
-                    rectangle( frame, eyes[0],  Scalar( 0, 255, 0 ), 1, 8, 0 );
-                    rectangle( frame, eyes[1],  Scalar( 0, 255, 0 ), 1, 8, 0 );
-                }
-            }
-            else { cerr << " --(!) Could not read frame\n" <<endl; return false; }
-        }
-        else{ cerr << " --(!) Could not open videostream\n" <<endl; return false; }
-
-
-
-    } while(waitKey(1)!='q');
-
-    return true;
-}
-*/
-
 
 int startGame() {
     int your_score = 0;
@@ -710,8 +461,6 @@ int startGame() {
     vector<Rect> bounds_to_disp(2,Rect(0,0,0,0));
     double xBound = max(gazeCalibrationsLeftEye[4][0], gazeCalibrationsRightEye[4][0]);
     double yBound = max(gazeCalibrationsLeftEye[4][1], gazeCalibrationsRightEye[4][1]);
-//    double xBound = 0.5*(gazeCalibrationsLeftEye[4][0] + gazeCalibrationsRightEye[4][0]);
-//    double yBound = 0.5*(gazeCalibrationsLeftEye[4][1] + gazeCalibrationsRightEye[4][1]);
 
     xBound = 1.2*xBound;
     yBound = 1.2*yBound;
@@ -728,10 +477,10 @@ int startGame() {
     while((char)cc != 'q'){
         // Read Frame / Pre-Process
         if(!cap.read(frame)) { cerr<< "unable to read frame\n"; return -1; }
+        // NOTE: eye center estimation REQUIRES grey scale
         flip(frame, frame, 1);
         eye_search_space = frame(eyeROI);
         cvtColor( eye_search_space, eye_search_space, COLOR_BGR2GRAY );
-
 
         // Find Eyes
         eyes_cascade.detectMultiScale(eye_search_space, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80));
@@ -758,30 +507,13 @@ int startGame() {
                eye_centers[0] = findEyeCenter(eye_search_space, eyes[0], "_");
                eye_centers[1] = findEyeCenter(eye_search_space, eyes[1], "_");
 
-
-//               eye1 = findEyeCenter(eye_search_space, eyes[0], "_");
-//               eye2 = findEyeCenter(eye_search_space, eyes[1], "_");
-
-
                // shift eye_centers to midpoint of eye boxes
                eye_centers[0].x += eyes[0].x;
                eye_centers[0].y += eyes[0].y;
                eye_centers[1].x += eyes[1].x;
                eye_centers[1].y += eyes[1].y;
 
-   //            // Draw boundary region
-//               rectangle( game_frame,
-//                          Rect(-eyes[0].x + width_screen/2,
-//                               -eyes[0].y + height_screen/2,
-//                               eyes[0].width,
-//                               eyes[0].height),
-//                          (0,255,255), 3, 7, 0 );
-//               circle(game_frame, Point(eye_centers[0].x, 2, Scalar(255, 0, 255), 1);
-//               circle(game_frame, eye_centers[1], 2, Scalar(255, 0, 255), 1);
-//               imshow( game_window, game_frame ); waitKey(1);
-
-
-               // Left Eye region and center
+               // Left eye region and center
                rectangle( eye_search_space, eyes[0], Scalar( 255, 0, 255 ), 1, 8, 0 );
                rectangle( eye_search_space, eyes[0], Scalar( 255, 0, 255 ), 1, 8, 0 );
                circle(eye_search_space, eye_centers[0], 2, Scalar(255,255,255), 1);
@@ -791,9 +523,7 @@ int startGame() {
                // Draw boundary region
                rectangle( eye_search_space, bounds_to_disp[0], Scalar(255,255,255), 1, 8, 0 );
                rectangle( eye_search_space, bounds_to_disp[1], Scalar(255,255,255), 1, 8, 0 );
-
                imshow( "Eye Search Space", eye_search_space ); cc=waitKey(1);
-
 
                // undo shift eye_centers
                eye_centers[0].x -= eyes[0].x;
@@ -866,3 +596,4 @@ int startGame() {
     return your_score;
 }
 
+*/

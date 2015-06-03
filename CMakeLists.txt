@@ -7,6 +7,7 @@ set( OBJ_DET_SRC face_detect/objectDetection2.cpp
 		 face_detect/findEyeCenter.cpp 
 		 face_detect/findEyeCorner.cpp
 		 face_detect/helpers.cpp 
+		 face_detect/initialize.cpp
 )
 # save all binaries to bin folder in top level of project
 #set( EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/test )
