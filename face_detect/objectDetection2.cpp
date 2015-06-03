@@ -89,7 +89,6 @@ bool mid_not_corners = true;
 char overlay_str[100];
 int score;
 
-double xbound,ybound;
 
 
 
@@ -338,7 +337,7 @@ void getGaze(int x, int y, int index) {
     Point eye_center_L, eye_center_R;
     clock_t start;
     double dur, temp,  fraction[4]; //fr[0:2) --> L(x/W,y/H); fr[2:4) --> R(x/W,y/H)
-    xbound=0, ybound=0;
+
 
     // Display the circle
     game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
@@ -392,6 +391,13 @@ void getGaze(int x, int y, int index) {
             eye_center_L = findEyeCenter(eye_search_space, leftEye, "_");
             // Find Right Eye Center
             eye_center_R = findEyeCenter(eye_search_space, rightEye, "_");
+
+            printf("calibration - l_eye_center: (%d,%d); eye_box_dims: %dx%d\n", \
+                   eye_center_L.x,\
+                   eye_center_L.y,\
+                   leftEye.width,\
+                   leftEye.height);
+
 
             // Find Eye Center Fractions
             fraction[0] = (double)eye_center_L.x / (double)leftEye.width;
@@ -696,15 +702,16 @@ bool testFindEyeCenter(VideoCapture &cap) {
 */
 
 
-
-
 int startGame() {
     int your_score = 0;
-    Point eye_center;
-    Rect eye;
+    vector<Point> eye_centers(2,Point(0,0));
+    Point eye_center_avg, eye1,eye2;
+    Rect eyes_avg;
+    vector<Rect> bounds_to_disp(2,Rect(0,0,0,0));
     double xBound = max(gazeCalibrationsLeftEye[4][0], gazeCalibrationsRightEye[4][0]);
     double yBound = max(gazeCalibrationsLeftEye[4][1], gazeCalibrationsRightEye[4][1]);
-    int side = 800;
+//    double xBound = 0.5*(gazeCalibrationsLeftEye[4][0] + gazeCalibrationsRightEye[4][0]);
+//    double yBound = 0.5*(gazeCalibrationsLeftEye[4][1] + gazeCalibrationsRightEye[4][1]);
 
     xBound = 1.2*xBound;
     yBound = 1.2*yBound;
@@ -712,13 +719,7 @@ int startGame() {
     // Prompt to start
     game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
     displayOverlay(game_window, "Great!  Let the game begin! Press 'space' to start", -1);
-    // Draw boundary region
-    rectangle( game_frame,
-               Rect(-xBound*side + width_screen/2,
-                    -yBound*side + height_screen/2,
-                    2.*xBound*side,
-                    2.*yBound*side),
-               (0,255,255), 3, 7, 0 );
+
     imshow( game_window, game_frame ); waitKey(1);
     waitForSpace();
 
@@ -728,101 +729,130 @@ int startGame() {
         // Read Frame / Pre-Process
         if(!cap.read(frame)) { cerr<< "unable to read frame\n"; return -1; }
         flip(frame, frame, 1);
-//        cvtColor( frame, frame, COLOR_BGR2GRAY );
         eye_search_space = frame(eyeROI);
+        cvtColor( eye_search_space, eye_search_space, COLOR_BGR2GRAY );
 
 
         // Find Eyes
         eyes_cascade.detectMultiScale(eye_search_space, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80));
 
-        // Draw Eyes and Display
-        for( size_t j = 0; j < eyes.size(); j++ )
-        {
-            rectangle( eye_search_space, eyes[j], Scalar( 255, 0, 255 ), 1, 8, 0 );
-        }
-        imshow( "Eye Search Space", eye_search_space );
+        bounds_to_disp[0].width = 2.*xBound*eyes[0].width;
+        bounds_to_disp[0].height = 2.*yBound*eyes[0].height;
+        bounds_to_disp[0].x = eyes[0].x+(0.5-xBound)*eyes[0].width;
+        bounds_to_disp[0].y = eyes[0].y+(0.5-yBound)*eyes[0].height;
+        bounds_to_disp[1].width = 2*xBound*eyes[1].width;
+        bounds_to_disp[1].height = 2*yBound*eyes[1].height;
+        bounds_to_disp[1].x = eyes[1].x+(0.5-xBound)*eyes[1].width;
+        bounds_to_disp[1].y = eyes[1].y+(0.5-yBound)*eyes[1].height;
 
-        // Catch a blink
-        if(eyes.size() == 0) {
-            sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", score);
-            break;
-        }
+          // Catch a blink
+           if(eyes.size() == 0) {
+               sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", score);
+               break;
+           }
 
-        // Check Gaze
-        if( eyes.size() == 2) {
+           // Check Gaze
+           if( eyes.size() == 2) {
 
-            eye = eyes[0];
-            // Find Eye Center
-            eye_center = findEyeCenter(eye_search_space, eye, "_");
-
-//            // Draw boundary region
-//            rectangle( game_frame,
-//                       Rect(-xBound*side + width_screen/2,
-//                            -yBound*side + height_screen/2,
-//                            2.*xBound*side,
-//                            2.*yBound*side),
-//                       (0,255,255), 3, 7, 0 );
-            circle(game_frame, gaze, 2, Scalar(255, 0, 255), 1);
-            imshow( game_window, game_frame ); waitKey(1);
+               // Find Eye Center
+               eye_centers[0] = findEyeCenter(eye_search_space, eyes[0], "_");
+               eye_centers[1] = findEyeCenter(eye_search_space, eyes[1], "_");
 
 
-            // Check in bounds
-            if(eye_center.x < (0.5-xBound)*eye.width) {
-                sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", score);
+//               eye1 = findEyeCenter(eye_search_space, eyes[0], "_");
+//               eye2 = findEyeCenter(eye_search_space, eyes[1], "_");
 
-//                printf("xbound: %f\n", xBound);
-                printf("eye_width: %d\n", eye.width);
-                printf("xBound: %d\n", (int)((0.5-xBound)*eye.width));
-                printf("xEyeCenter: %d\n", eye_center.x);
 
-                break;
+               // shift eye_centers to midpoint of eye boxes
+               eye_centers[0].x += eyes[0].x;
+               eye_centers[0].y += eyes[0].y;
+               eye_centers[1].x += eyes[1].x;
+               eye_centers[1].y += eyes[1].y;
+
+   //            // Draw boundary region
+//               rectangle( game_frame,
+//                          Rect(-eyes[0].x + width_screen/2,
+//                               -eyes[0].y + height_screen/2,
+//                               eyes[0].width,
+//                               eyes[0].height),
+//                          (0,255,255), 3, 7, 0 );
+//               circle(game_frame, Point(eye_centers[0].x, 2, Scalar(255, 0, 255), 1);
+//               circle(game_frame, eye_centers[1], 2, Scalar(255, 0, 255), 1);
+//               imshow( game_window, game_frame ); waitKey(1);
+
+
+               // Left Eye region and center
+               rectangle( eye_search_space, eyes[0], Scalar( 255, 0, 255 ), 1, 8, 0 );
+               rectangle( eye_search_space, eyes[0], Scalar( 255, 0, 255 ), 1, 8, 0 );
+               circle(eye_search_space, eye_centers[0], 2, Scalar(255,255,255), 1);
+               // Right eye region and center
+               rectangle( eye_search_space, eyes[1], Scalar( 255, 0, 255 ), 1, 8, 0 );
+               circle(eye_search_space, eye_centers[1], 2, Scalar(255,255,255), 1);
+               // Draw boundary region
+               rectangle( eye_search_space, bounds_to_disp[0], Scalar(255,255,255), 1, 8, 0 );
+               rectangle( eye_search_space, bounds_to_disp[1], Scalar(255,255,255), 1, 8, 0 );
+
+               imshow( "Eye Search Space", eye_search_space ); cc=waitKey(1);
+
+
+               // undo shift eye_centers
+               eye_centers[0].x -= eyes[0].x;
+               eye_centers[0].y -= eyes[0].y;
+               eye_centers[1].x -= eyes[1].x;
+               eye_centers[1].y -= eyes[1].y;
+
+               // Check in bounds
+               if(eye_centers[0].x < (0.5-xBound)*eyes[0].width) {
+                   sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   printf("eye_width: %d\n", eyes[0].width);
+                   printf("xBoundL: %d\n", (int)((0.5-xBound)*eyes[0].width));
+                   printf("xEyeCenter: %d\n", eye_centers[0].x);
+
+                   break;
+               }
+               if(eye_centers[0].x > (0.5+xBound)*eyes[0].width) {
+                   sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   printf("eye_width: %d\n", eyes[0].width);
+                   printf("xBoundR: %d\n", (int)((0.5+xBound)*eyes[0].width));
+                   printf("xEyeCenter: %d\n", eye_centers[0].x);
+
+                   break;
+               }
+               if(eye_centers[0].y < (0.5-yBound)*eyes[0].height) {
+                   sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   printf("eye_width: %d\n", eyes[0].height);
+                   printf("yBoundU: %d\n", (int)((0.5-yBound)*eyes[0].height));
+                   printf("yEyeCenter: %d\n", eye_centers[0].y);
+                   break;
+               }
+               if(eye_centers[0].y > (0.5+yBound)*eyes[0].height) {
+                   sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   printf("eye_width: %d\n", eyes[0].height);
+                   printf("yBoundD: %d\n", (int)((0.5+yBound)*eyes[0].height));
+                   printf("yEyeCenter: %d\n", eye_centers[0].y);
+                   break;
+               }
+
+
+               // Check in bounds
+               if(eye_centers[1].x < (0.5-xBound)*eyes[1].width) {
+                   sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   break;
+               }
+               if(eye_centers[1].x > (0.5+xBound)*eyes[1].width) {
+                   sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   break;
+               }
+               if(eye_centers[1].y < (0.5-yBound)*eyes[1].height) {
+                   sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   break;
+               }
+               if(eye_centers[1].y > (0.5+yBound)*eyes[1].height) {
+                   sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
+                   break;
+               }
+
             }
-            if(eye_center.x > (0.5+xBound)*eye.width) {
-                sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", score);
-
-//                printf("xbound: %f\n", xBound);
-                printf("eye_width: %d\n", eye.width);
-                printf("xBound: %d\n", (int)((0.5+xBound)*eye.width));
-                printf("xEyeCenter: %d\n", eye_center.x);
-
-                break;
-            }
-            if(eye_center.y < (0.5-yBound)*eye.height) {
-                sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", score);
-                printf("eye_width: %d\n", eye.height);
-                printf("yBound: %d\n", (int)((0.5-yBound)*eye.height));
-                printf("yEyeCenter: %d\n", eye_center.y);
-                break;
-            }
-            if(eye_center.y > (0.5+yBound)*eye.height) {
-                sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", score);
-                printf("eye_width: %d\n", eye.height);
-                printf("yBound: %d\n", (int)((0.5+yBound)*eye.height));
-                printf("yEyeCenter: %d\n", eye_center.y);
-                break;
-            }
-
-            eye = eyes[1];
-            // Find Eye Center
-            eye_center = findEyeCenter(eye_search_space, eye, "_");
-            // Check in bounds
-            if(eye_center.x < (0.5-xBound)*eye.width) {
-                sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", score);
-                break;
-            }
-            if(eye_center.x > (0.5+xBound)*eye.width) {
-                sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", score);
-                break;
-            }
-            if(eye_center.y < (0.5-yBound)*eye.height) {
-                sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", score);
-                break;
-            }
-            if(eye_center.y > (0.5+yBound)*eye.height) {
-                sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", score);
-                break;
-            }
-        }
 
         your_score++;
 
@@ -834,5 +864,5 @@ int startGame() {
     imshow( game_window, game_frame ); waitKey(1);
 
     return your_score;
-
 }
+
