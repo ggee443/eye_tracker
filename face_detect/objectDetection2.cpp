@@ -21,6 +21,7 @@
 #include "globals.h"
 #include "initialize.h"
 
+#define CHECK_GAZE
 #define DEBUG
 
 using namespace std;
@@ -103,22 +104,35 @@ void initKalmanFilter(Point &pp) {
 
 
 int startGame() {
+    printf("Game has started\n\n");
+
     int your_score = 0;
     Point eye_centers[2];
     vector<Rect> bounds_to_disp(2,Rect(0,0,0,0));
 
-    double xBound = 1.2*gazeCalibrations[0];
-    double yBound = 1.2*gazeCalibrations[1];
+    double xBound = 1.5*gazeCalibrations[0];
+    double yBound = 1.5*gazeCalibrations[1];
 
     // Prompt to start
     game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
     displayOverlay(game_window, "Great!  Let the game begin! Press 'space' to start", -1);
 
-    imshow( game_window, game_frame ); waitKey(1);
-    waitForSpace();
+    cc = 0;
+    while((char)cc != ' ') {
+        if(!capture.read(frame)) { cerr<< "unable to read frame\n"; return -1; }
+        eye_search_space = frame(eyeROI);
+        flip(eye_search_space, eye_search_space, 1);
+
+        eye_search_space.copyTo(game_frame(Rect(width_screen/2 - eye_search_space.cols/2,
+                                     0.35*height_screen - eye_search_space.rows/2,
+                                     eye_search_space.cols, eye_search_space.rows)));
+        imshow( game_window, game_frame );
+        cc = waitKey(1);
+    }
+    cc = 0;
 
 
-
+    cout << "searching for eyes...\n";
     while((char)cc != 'q'){
         // Read Frame / Pre-Process
         if(!capture.read(frame)) { cerr<< "unable to read frame\n"; return -1; }
@@ -130,28 +144,20 @@ int startGame() {
         // Find Eyes
         eyes_cascade.detectMultiScale(eye_search_space, eyes, 1.1, 2, 0 |CV_HAAR_SCALE_IMAGE, Size(50,50),Size(80,80));
 
-        bounds_to_disp[0].width = 2.*xBound*eyes[0].width;
-        bounds_to_disp[0].height = 2.*yBound*eyes[0].height;
-        bounds_to_disp[0].x = eyes[0].x+(0.5-xBound)*eyes[0].width;
-        bounds_to_disp[0].y = eyes[0].y+(0.5-yBound)*eyes[0].height;
-        bounds_to_disp[1].width = 2*xBound*eyes[1].width;
-        bounds_to_disp[1].height = 2*yBound*eyes[1].height;
-        bounds_to_disp[1].x = eyes[1].x+(0.5-xBound)*eyes[1].width;
-        bounds_to_disp[1].y = eyes[1].y+(0.5-yBound)*eyes[1].height;
+      // Catch a blink
+       if(eyes.size() == 0) {
+           sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", your_score);
+           break;
+       }
 
-          // Catch a blink
-           if(eyes.size() == 0) {
-               sprintf(overlay_str, "You Blinked!\nScore: %d\nPlay Again? (y/n)", score);
-               break;
-           }
+    #ifdef CHECK_GAZE
+       // Check Gaze
+       if( eyes.size() == 2) {
+           // Find Eye Center
+           eye_centers[0] = findEyeCenter(eye_search_space, eyes[0], "_");
+           eye_centers[1] = findEyeCenter(eye_search_space, eyes[1], "_");
 
-           // Check Gaze
-           if( eyes.size() == 2) {
-
-               // Find Eye Center
-               eye_centers[0] = findEyeCenter(eye_search_space, eyes[0], "_");
-               eye_centers[1] = findEyeCenter(eye_search_space, eyes[1], "_");
-
+           #ifdef DEBUG
                // shift eye_centers to midpoint of eye boxes
                eye_centers[0].x += eyes[0].x;
                eye_centers[0].y += eyes[0].y;
@@ -165,6 +171,17 @@ int startGame() {
                // Right eye region and center
                rectangle( eye_search_space, eyes[1], Scalar( 255, 0, 255 ), 1, 8, 0 );
                circle(eye_search_space, eye_centers[1], 2, Scalar(255,255,255), 1);
+
+               // Set Boundaries to Display
+               bounds_to_disp[0].width = 2.*xBound*eyes[0].width;
+               bounds_to_disp[0].height = 2.*yBound*eyes[0].height;
+               bounds_to_disp[0].x = eyes[0].x+(0.5-xBound)*eyes[0].width;
+               bounds_to_disp[0].y = eyes[0].y+(0.5-yBound)*eyes[0].height;
+               bounds_to_disp[1].width = 2*xBound*eyes[1].width;
+               bounds_to_disp[1].height = 2*yBound*eyes[1].height;
+               bounds_to_disp[1].x = eyes[1].x+(0.5-xBound)*eyes[1].width;
+               bounds_to_disp[1].y = eyes[1].y+(0.5-yBound)*eyes[1].height;
+
                // Draw boundary region
                rectangle( eye_search_space, bounds_to_disp[0], Scalar(255,255,255), 1, 8, 0 );
                rectangle( eye_search_space, bounds_to_disp[1], Scalar(255,255,255), 1, 8, 0 );
@@ -175,59 +192,61 @@ int startGame() {
                eye_centers[0].y -= eyes[0].y;
                eye_centers[1].x -= eyes[1].x;
                eye_centers[1].y -= eyes[1].y;
+           #endif
 
-               // Check in bounds
-               if(eye_centers[0].x < (0.5-xBound)*eyes[0].width) {
-                   sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   printf("eye_width: %d\n", eyes[0].width);
-                   printf("xBoundL: %d\n", (int)((0.5-xBound)*eyes[0].width));
-                   printf("xEyeCenter: %d\n", eye_centers[0].x);
+           // Check in bounds
+           if(eye_centers[0].x < (0.5-xBound)*eyes[0].width) {
+               sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
+               printf("eye_width: %d\n", eyes[0].width);
+               printf("xBoundL: %d\n", (int)((0.5-xBound)*eyes[0].width));
+               printf("xEyeCenter: %d\n", eye_centers[0].x);
 
-                   break;
-               }
-               if(eye_centers[0].x > (0.5+xBound)*eyes[0].width) {
-                   sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   printf("eye_width: %d\n", eyes[0].width);
-                   printf("xBoundR: %d\n", (int)((0.5+xBound)*eyes[0].width));
-                   printf("xEyeCenter: %d\n", eye_centers[0].x);
+               break;
+           }
+           if(eye_centers[0].x > (0.5+xBound)*eyes[0].width) {
+               sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
+               printf("eye_width: %d\n", eyes[0].width);
+               printf("xBoundR: %d\n", (int)((0.5+xBound)*eyes[0].width));
+               printf("xEyeCenter: %d\n", eye_centers[0].x);
 
-                   break;
-               }
-               if(eye_centers[0].y < (0.5-yBound)*eyes[0].height) {
-                   sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   printf("eye_width: %d\n", eyes[0].height);
-                   printf("yBoundU: %d\n", (int)((0.5-yBound)*eyes[0].height));
-                   printf("yEyeCenter: %d\n", eye_centers[0].y);
-                   break;
-               }
-               if(eye_centers[0].y > (0.5+yBound)*eyes[0].height) {
-                   sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   printf("eye_width: %d\n", eyes[0].height);
-                   printf("yBoundD: %d\n", (int)((0.5+yBound)*eyes[0].height));
-                   printf("yEyeCenter: %d\n", eye_centers[0].y);
-                   break;
-               }
+               break;
+           }
+           if(eye_centers[0].y < (0.5-yBound)*eyes[0].height) {
+               sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
+               printf("eye_width: %d\n", eyes[0].height);
+               printf("yBoundU: %d\n", (int)((0.5-yBound)*eyes[0].height));
+               printf("yEyeCenter: %d\n", eye_centers[0].y);
+               break;
+           }
+           if(eye_centers[0].y > (0.5+yBound)*eyes[0].height) {
+               sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
+               printf("eye_width: %d\n", eyes[0].height);
+               printf("yBoundD: %d\n", (int)((0.5+yBound)*eyes[0].height));
+               printf("yEyeCenter: %d\n", eye_centers[0].y);
+               break;
+           }
 
 
-               // Check in bounds
-               if(eye_centers[1].x < (0.5-xBound)*eyes[1].width) {
-                   sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   break;
-               }
-               if(eye_centers[1].x > (0.5+xBound)*eyes[1].width) {
-                   sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   break;
-               }
-               if(eye_centers[1].y < (0.5-yBound)*eyes[1].height) {
-                   sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   break;
-               }
-               if(eye_centers[1].y > (0.5+yBound)*eyes[1].height) {
-                   sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
-                   break;
-               }
+           // Check in bounds
+           if(eye_centers[1].x < (0.5-xBound)*eyes[1].width) {
+               sprintf(overlay_str, "You Looked Left!\nScore: %d\nPlay Again? (y/n)", your_score);
+               break;
+           }
+           if(eye_centers[1].x > (0.5+xBound)*eyes[1].width) {
+               sprintf(overlay_str, "You Looked Right!\nScore: %d\nPlay Again? (y/n)", your_score);
+               break;
+           }
+           if(eye_centers[1].y < (0.5-yBound)*eyes[1].height) {
+               sprintf(overlay_str, "You Looked Up!\nScore: %d\nPlay Again? (y/n)", your_score);
+               break;
+           }
+           if(eye_centers[1].y > (0.5+yBound)*eyes[1].height) {
+               sprintf(overlay_str, "You Looked Down!\nScore: %d\nPlay Again? (y/n)", your_score);
+               break;
+           }
 
-            }
+        }
+    #endif
 
         your_score++;
 

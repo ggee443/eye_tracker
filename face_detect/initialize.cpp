@@ -14,7 +14,7 @@
 #include "helpers.h"
 #include "findEyeCenter.h"
 
-#define DEBUG
+#define DEBUG_INIT
 
 using namespace std;
 using namespace cv;
@@ -136,7 +136,7 @@ bool initializeGame(cv::Mat &game_frame, cv::Rect &eyeROI, double* gazeCalibrati
         }
         imshow( game_window, game_frame ); waitKey(1);
 
-        #ifdef DEBUG
+        #ifdef DEBUG_INIT
             // Print Face & Eye ROI Dimensions
             cout << "FACE  w: " << faceROI.width << " h: " << faceROI.height << "\n";
             cout << "EYES  w: " << eyeROI.width << " h: " << eyeROI.height << "\n";
@@ -342,7 +342,7 @@ void getGaze(Mat &game_frame, Rect &eyeROI, double* gazeCalibrations)
             printf("R: (%1.2f,%1.2f)\n", fraction[2], fraction[3]);
         }
 
-#ifdef DEBUG
+#ifdef DEBUG_INIT
         // face/eye ROIs
         rectangle( frame, faceROI,  Scalar( 255, 0, 0 ), 1, 8, 0 );
         rectangle( frame, eyeROI,  Scalar( 0, 255, 0 ), 1, 8, 0 );
