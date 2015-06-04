@@ -41,6 +41,7 @@ RNG rng(12345);
 
 // Initialize Mem
 Mat game_frame;
+Mat playing_frame[2];
 int cc;
 
 // Search space
@@ -73,9 +74,12 @@ int main( void )
 //  cap.open();
   cout.precision(numeric_limits<double>::digits10);
 
+  // Load game images
+  playing_frame[0] = imread(staring_face,CV_LOAD_IMAGE_COLOR);
+  playing_frame[1] = imread(lose_by_blink_face, CV_LOAD_IMAGE_COLOR);
+
   // Load the cascade
   if( !eyes_cascade.load( eye_cascade_path + eyes_cascade_name ) ){ printf("--(!)objectDetection2:Error loading eyes_cascade files\n"); return -1; };
-
 
   // Initialize Game
   cout << "Game is initialized: " << boolalpha << initializeGame(game_frame, eyeROI, gazeCalibrations) << endl;
@@ -131,6 +135,11 @@ int startGame() {
     }
     cc = 0;
 
+    playing_frame[0].copyTo(game_frame(Rect(width_screen/2 - playing_frame[0].cols/2,
+                                         0.35*height_screen - playing_frame[0].rows/2,
+                                         playing_frame[0].cols, playing_frame[0].rows)));
+    imshow( game_window, game_frame );
+    cc = waitKey(1);
 
     cout << "searching for eyes...\n";
     while((char)cc != 'q'){
@@ -254,8 +263,19 @@ int startGame() {
     }
 
 
+
+    // clear game screen
+    game_frame = Mat::zeros(height_screen, width_screen, CV_8UC3);
+    // load and display losing face :(
+
+    playing_frame[1].copyTo(game_frame(Rect(width_screen/2 - playing_frame[1].cols/2,
+                                         0.35*height_screen - playing_frame[1].rows/2,
+                                         playing_frame[1].cols, playing_frame[1].rows)));
     displayOverlay(game_window, overlay_str, -1);
     imshow( game_window, game_frame ); waitKey(1);
+
+
+
 
     return your_score;
 }

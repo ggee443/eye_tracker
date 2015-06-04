@@ -366,7 +366,7 @@ void getGaze(Mat &game_frame, Rect &eyeROI, double* gazeCalibrations)
         drawEyeCenter(eye_centers[0]);
         drawEyeCenter(eye_centers[1]);
 
-        imshow("eye gaze",frame);
+//        imshow("eye gaze",frame);
 #endif
 
         if(gaze_count == (num_frames/3)) {

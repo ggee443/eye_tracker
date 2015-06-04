@@ -16,4 +16,7 @@ const std::string eyes_cascade_name = "haarcascade_eye_tree_eyeglasses.xml";
 //std::string eyes_cascade_name = "haarcascade_lefteye_2splits.xml";
 //std::string eyes_cascade_name = "haarcascade_righteye_2splits.xml";
 
+const std::string staring_face = "/home/ee443/FinalProjectEE443/eye_tracker/gui_data/game_pics/stare1.jpg";
+const std::string lose_by_blink_face = "/home/ee443/FinalProjectEE443/eye_tracker/gui_data/game_pics/blink_kanye.jpg";
+
 #endif // GLOBALS_H
