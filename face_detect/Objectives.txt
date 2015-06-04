@@ -15,7 +15,7 @@ Game Interface
             a) use kalman filter for more accurate center estimation
         [incomplete] Determine gaze - use linear model to map center to gaze
             a) draw gaze within screen boundary
-        [incomplete] Check for valid stare
+        [complete] Check for valid stare
             a) determine and report if gaze is outside stare boundary
             b) determine and report if blink occured (done)
             c) report duration of stare (done)
